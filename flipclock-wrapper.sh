@@ -3,11 +3,12 @@
 # Script Name: flipclock-wrapper.sh
 # Description: Launches the AlynxZhou flipclock as a KDE Plasma screensaver,
 #              triggered by swayidle after a set period of inactivity.
-# Features:    Skips launch if audio is currently playing (catches YouTube,
-#              video players, music). Kills flipclock instantly on any keyboard
-#              or mouse input by reading directly from /dev/input kernel events.
+# Features:    Skips launch if any media player (browser, VLC, etc.) is
+#              actively playing audio/video, detected via MPRIS through
+#              playerctl. Kills flipclock instantly on any keyboard or mouse
+#              input by reading directly from /dev/input kernel events.
 # Dependencies: flipclock (AlynxZhou, AUR)
-#               pactl (provided by libpulse)
+#               playerctl
 # ==============================================================================
 # --- DEPENDENCY CHECK ---
 MISSING_DEPS=()
@@ -16,8 +17,8 @@ if ! command -v flipclock &>/dev/null; then
     MISSING_DEPS+=("flipclock")
 fi
 
-if ! command -v pactl &>/dev/null; then
-    MISSING_DEPS+=("libpulse")
+if ! command -v playerctl &>/dev/null; then
+    MISSING_DEPS+=("playerctl")
 fi
 
 if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
@@ -29,9 +30,8 @@ if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
 fi
 # ----------------------------------------
 
-# Don't launch if audio is playing
-AUDIO_RUNNING=$(pactl list sinks 2>/dev/null | grep -c "State: RUNNING")
-if [ "$AUDIO_RUNNING" -gt 0 ]; then
+# Don't launch if any media player is actively playing (MPRIS via playerctl)
+if playerctl -a status 2>/dev/null | grep -q "Playing"; then
     exit 0
 fi
 
